@@ -4,6 +4,7 @@ Below are notifications for security and privacy events within Netflix Open Sour
 
 | Date              | Type      | Subject |
 |-------------------|-----------|-----------------------------------------------|
+| January 10, 2018 | Important | [Unauthenticated Server-Side Request Forgery in Hystrix-Dashboard](advisories/nflx-2018-001.md) | 
 | April 14, 2017 | Important | [Spinnaker Orca RCE and arbitrary file and URL access](advisories/nflx-2017-001.md) | 
 | August 31, 2016 | Important | [zuul.filter.admin.enabled Defaults to True](advisories/nflx-2016-003.md) |
 | June 6, 2016 | Important | [Heap Overflow in Dynomite YAML Configuration Parser](advisories/nflx-2016-002.md) |
