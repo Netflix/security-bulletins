@@ -1,0 +1,2 @@
+
+iptables -A INPUT -p tcp -m tcpmss --mss 1:500 -j DROP

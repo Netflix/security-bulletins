@@ -1,0 +1,194 @@
+Index: sys/netinet/tcp_stacks/rack.c
+===================================================================
+--- sys/netinet/tcp_stacks/rack.c	(revision 348678)
++++ sys/netinet/tcp_stacks/rack.c	(working copy)
+@@ -1,5 +1,5 @@
+ /*-
+- * Copyright (c) 2016-2018 Netflix, Inc.
++ * Copyright (c) 2016-2019 Netflix, Inc.
+  *
+  * Redistribution and use in source and binary forms, with or without
+  * modification, are permitted provided that the following conditions
+@@ -202,6 +202,7 @@
+ static int32_t rack_sack_block_limit = 128;
+ static int32_t rack_use_sack_filter = 1;
+ static int32_t rack_tlp_threshold_use = TLP_USE_TWO_ONE;
++static uint32_t rack_map_split_limit = 0;	/* unlimited by default */
+ 
+ /* Rack specific counters */
+ counter_u64_t rack_badfr;
+@@ -227,6 +228,8 @@
+ counter_u64_t rack_to_alloc;
+ counter_u64_t rack_to_alloc_hard;
+ counter_u64_t rack_to_alloc_emerg;
++counter_u64_t rack_alloc_limited_conns;
++counter_u64_t rack_split_limited;
+ 
+ counter_u64_t rack_sack_proc_all;
+ counter_u64_t rack_sack_proc_short;
+@@ -260,6 +263,8 @@
+ rack_ack_received(struct tcpcb *tp, struct tcp_rack *rack,
+     struct tcphdr *th, uint16_t nsegs, uint16_t type, int32_t recovery);
+ static struct rack_sendmap *rack_alloc(struct tcp_rack *rack);
++static struct rack_sendmap *rack_alloc_limit(struct tcp_rack *rack,
++    uint8_t limit_type);
+ static struct rack_sendmap *
+ rack_check_recovery_mode(struct tcpcb *tp,
+     uint32_t tsused);
+@@ -444,6 +449,8 @@
+ 		counter_u64_zero(rack_sack_proc_short);
+ 		counter_u64_zero(rack_sack_proc_restart);
+ 		counter_u64_zero(rack_to_alloc);
++		counter_u64_zero(rack_alloc_limited_conns);
++		counter_u64_zero(rack_split_limited);
+ 		counter_u64_zero(rack_find_high);
+ 		counter_u64_zero(rack_runt_sacks);
+ 		counter_u64_zero(rack_used_tlpmethod);
+@@ -621,6 +628,11 @@
+ 	    OID_AUTO, "pktdelay", CTLFLAG_RW,
+ 	    &rack_pkt_delay, 1,
+ 	    "Extra RACK time (in ms) besides reordering thresh");
++	SYSCTL_ADD_U32(&rack_sysctl_ctx,
++	    SYSCTL_CHILDREN(rack_sysctl_root),
++	    OID_AUTO, "split_limit", CTLFLAG_RW,
++	    &rack_map_split_limit, 0,
++	    "Is there a limit on the number of map split entries (0=unlimited)");
+ 	SYSCTL_ADD_S32(&rack_sysctl_ctx,
+ 	    SYSCTL_CHILDREN(rack_sysctl_root),
+ 	    OID_AUTO, "inc_var", CTLFLAG_RW,
+@@ -756,7 +768,19 @@
+ 	    SYSCTL_CHILDREN(rack_sysctl_root),
+ 	    OID_AUTO, "allocemerg", CTLFLAG_RD,
+ 	    &rack_to_alloc_emerg,
+-	    "Total alocations done from emergency cache");
++	    "Total allocations done from emergency cache");
++	rack_alloc_limited_conns = counter_u64_alloc(M_WAITOK);
++	SYSCTL_ADD_COUNTER_U64(&rack_sysctl_ctx,
++	    SYSCTL_CHILDREN(rack_sysctl_root),
++	    OID_AUTO, "alloc_limited_conns", CTLFLAG_RD,
++	    &rack_alloc_limited_conns,
++	    "Connections with allocations dropped due to limit");
++	rack_split_limited = counter_u64_alloc(M_WAITOK);
++	SYSCTL_ADD_COUNTER_U64(&rack_sysctl_ctx,
++	    SYSCTL_CHILDREN(rack_sysctl_root),
++	    OID_AUTO, "split_limited", CTLFLAG_RD,
++	    &rack_split_limited,
++	    "Split allocations dropped due to limit");
+ 	rack_sack_proc_all = counter_u64_alloc(M_WAITOK);
+ 	SYSCTL_ADD_COUNTER_U64(&rack_sysctl_ctx,
+ 	    SYSCTL_CHILDREN(rack_sysctl_root),
+@@ -1120,10 +1144,11 @@
+ {
+ 	struct rack_sendmap *rsm;
+ 
+-	counter_u64_add(rack_to_alloc, 1);
+-	rack->r_ctl.rc_num_maps_alloced++;
+ 	rsm = uma_zalloc(rack_zone, M_NOWAIT);
+ 	if (rsm) {
++alloc_done:
++		counter_u64_add(rack_to_alloc, 1);
++		rack->r_ctl.rc_num_maps_alloced++;
+ 		return (rsm);
+ 	}
+ 	if (rack->rc_free_cnt) {
+@@ -1131,14 +1156,46 @@
+ 		rsm = TAILQ_FIRST(&rack->r_ctl.rc_free);
+ 		TAILQ_REMOVE(&rack->r_ctl.rc_free, rsm, r_next);
+ 		rack->rc_free_cnt--;
+-		return (rsm);
++		goto alloc_done;
+ 	}
+ 	return (NULL);
+ }
+ 
++/* wrapper to allocate a sendmap entry, subject to a specific limit */
++static struct rack_sendmap *
++rack_alloc_limit(struct tcp_rack *rack, uint8_t limit_type)
++{
++	struct rack_sendmap *rsm;
++
++	if (limit_type) {
++		/* currently there is only one limit type */
++		if (rack_map_split_limit > 0 &&
++		    rack->r_ctl.rc_num_split_allocs >= rack_map_split_limit) {
++			counter_u64_add(rack_split_limited, 1);
++			if (!rack->alloc_limit_reported) {
++				rack->alloc_limit_reported = 1;
++				counter_u64_add(rack_alloc_limited_conns, 1);
++			}
++			return (NULL);
++		}
++	}
++
++	/* allocate and mark in the limit type, if set */
++	rsm = rack_alloc(rack);
++	if (rsm != NULL && limit_type) {
++		rsm->r_limit_type = limit_type;
++		rack->r_ctl.rc_num_split_allocs++;
++	}
++	return (rsm);
++}
++
+ static void
+ rack_free(struct tcp_rack *rack, struct rack_sendmap *rsm)
+ {
++	if (rsm->r_limit_type) {
++		/* currently there is only one limit type */
++		rack->r_ctl.rc_num_split_allocs--;
++	}
+ 	rack->r_ctl.rc_num_maps_alloced--;
+ 	if (rack->r_ctl.rc_tlpsend == rsm)
+ 		rack->r_ctl.rc_tlpsend = NULL;
+@@ -3942,7 +3999,7 @@
+ 		/*
+ 		 * Need to split this in two pieces the before and after.
+ 		 */
+-		nrsm = rack_alloc(rack);
++		nrsm = rack_alloc_limit(rack, RACK_LIMIT_TYPE_SPLIT);
+ 		if (nrsm == NULL) {
+ 			/*
+ 			 * failed XXXrrs what can we do but loose the sack
+@@ -4003,7 +4060,7 @@
+ 		goto do_rest_ofb;
+ 	}
+ 	/* Ok we need to split off this one at the tail */
+-	nrsm = rack_alloc(rack);
++	nrsm = rack_alloc_limit(rack, RACK_LIMIT_TYPE_SPLIT);
+ 	if (nrsm == NULL) {
+ 		/* failed rrs what can we do but loose the sack info? */
+ 		goto out;
+Index: sys/netinet/tcp_stacks/tcp_rack.h
+===================================================================
+--- sys/netinet/tcp_stacks/tcp_rack.h	(revision 348678)
++++ sys/netinet/tcp_stacks/tcp_rack.h	(working copy)
+@@ -54,8 +54,10 @@
+ 	uint8_t r_sndcnt;	/* Retran count, not limited by
+ 				 * RACK_NUM_OF_RETRANS */
+ 	uint8_t r_in_tmap;	/* Flag to see if its in the r_tnext array */
+-	uint8_t r_resv[3];
++	uint8_t r_limit_type;	/* is this entry counted against a limit? */
++	uint8_t r_resv[2];
+ };
++#define RACK_LIMIT_TYPE_SPLIT	1
+ 
+ TAILQ_HEAD(rack_head, rack_sendmap);
+ 
+@@ -241,7 +243,7 @@
+ 	uint32_t rc_num_maps_alloced;	/* Number of map blocks (sacks) we
+ 					 * have allocated */
+ 	uint32_t rc_rcvtime;	/* When we last received data */
+-	uint32_t rc_notused;
++	uint32_t rc_num_split_allocs;	/* num split map entries allocated */
+ 	uint32_t rc_last_output_to; 
+ 	uint32_t rc_went_idle_time;
+ 
+@@ -310,7 +312,8 @@
+ 	uint8_t rack_tlp_threshold_use;
+ 	uint8_t rc_allow_data_af_clo: 1,
+ 		delayed_ack : 1,
+-		rc_avail : 6;
++		alloc_limit_reported : 1,
++		rc_avail : 5;
+ 	uint8_t r_resv[2];	/* Fill to cache line boundary */
+ 	/* Cache line 2 0x40 */
+ 	struct rack_control r_ctl;

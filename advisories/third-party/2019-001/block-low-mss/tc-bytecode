@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cBPF=$(./tcpdump 500 | tr '\n' ',')
+echo "
+tc qdisc add dev eth0 handle ffff: ingress
+tc filter add dev eth0 parent ffff: bpf bytecode '$cBPF' action drop
+tc filter show dev eth0 parent ffff:
+"

@@ -1,0 +1,58 @@
+From cd4ffa93f16efea290bb70537f98f518e1927e63 Mon Sep 17 00:00:00 2001
+From: Joao Martins <joao.m.martins@oracle.com>
+Date: Mon, 10 Jun 2019 23:12:39 +0100
+Subject: [PATCH 5/5] tcp: fix fack_count accounting on tcp_shift_skb_data()
+
+v4.15 or since commit 737ff314563 ("tcp: use sequence distance to
+detect reordering") had switched from the packet-based FACK tracking
+to sequence-based.
+
+v4.14 and older still have the old logic and hence on
+tcp_skb_shift_data() needs to retain its original logic and have
+@fack_count in sync. In other words, we keep the increment of pcount with
+tcp_skb_pcount(skb) to later used that to update fack_count. To make it
+more explicit we track the new skb that gets incremented to pcount in
+@next_pcount, and we get to avoid the constant invocation of
+tcp_skb_pcount(skb) all together.
+
+Fixes: a5f1faa40101 ("tcp: limit payload size of sacked skbs")
+Reported-by: Alexey Kodanev <alexey.kodanev@oracle.com>
+Reviewed-by: Jack Vogel <jack.vogel@oracle.com>
+Reviewed-by: John Haxby <john.haxby@oracle.com>
+Reviewed-by: Rao Shoaib rao.shoaib@oracle.com>
+Signed-off-by: Joao Martins <joao.m.martins@oracle.com>
+Signed-off-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+---
+ net/ipv4/tcp_input.c | 9 ++++++---
+ 1 file changed, 6 insertions(+), 3 deletions(-)
+
+diff --git a/net/ipv4/tcp_input.c b/net/ipv4/tcp_input.c
+index fd5c2d2a1d9c..85c09829790b 100644
+--- a/net/ipv4/tcp_input.c
++++ b/net/ipv4/tcp_input.c
+@@ -1423,6 +1423,7 @@ static struct sk_buff *tcp_shift_skb_data(struct sock *sk, struct sk_buff *skb,
+ 	struct tcp_sock *tp = tcp_sk(sk);
+ 	struct sk_buff *prev;
+ 	int mss;
++	int next_pcount;
+ 	int pcount = 0;
+ 	int len;
+ 	int in_sack;
+@@ -1539,9 +1540,11 @@ static struct sk_buff *tcp_shift_skb_data(struct sock *sk, struct sk_buff *skb,
+ 		goto out;
+ 
+ 	len = skb->len;
+-	pcount = tcp_skb_pcount(skb);
+-	if (tcp_skb_shift(prev, skb, pcount, len))
+-		tcp_shifted_skb(sk, skb, state, pcount, len, mss, 0);
++	next_pcount = tcp_skb_pcount(skb);
++	if (tcp_skb_shift(prev, skb, next_pcount, len)) {
++		pcount += next_pcount;
++		tcp_shifted_skb(sk, skb, state, next_pcount, len, mss, 0);
++	}
+ out:
+ 	state->fack_count += pcount;
+ 	return prev;
+-- 
+2.21.0
+

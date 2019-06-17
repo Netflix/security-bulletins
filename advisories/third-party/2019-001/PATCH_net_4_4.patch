@@ -1,0 +1,36 @@
+Date: Sat,  8 Jun 2019 10:38:08 -0700
+Subject: [PATCH net 4/4] tcp: enforce tcp_min_snd_mss in tcp_mtu_probing()
+From: Eric Dumazet <edumazet@google.com>
+
+If mtu probing is enabled tcp_mtu_probing() could very well end up
+with a too small MSS.
+
+Use the new sysctl tcp_min_snd_mss to make sure MSS search
+is performed in an acceptable range.
+
+Signed-off-by: Eric Dumazet <edumazet@google.com>
+Reported-by: Jonathan Lemon <jonathan.lemon@gmail.com>
+Cc: Jonathan Looney <jtl@netflix.com>
+Cc: Neal Cardwell <ncardwell@google.com>
+Cc: Yuchung Cheng <ycheng@google.com>
+Cc: Tyler Hicks <tyhicks@canonical.com>
+Cc: Bruce Curtis <brucec@netflix.com>
+---
+ net/ipv4/tcp_timer.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/net/ipv4/tcp_timer.c b/net/ipv4/tcp_timer.c
+index 5bad937ce779ef8dca42a26dcbb5f1d60a571c73..c801cd37cc2a9c11f2dd4b9681137755e501a538 100644
+--- a/net/ipv4/tcp_timer.c
++++ b/net/ipv4/tcp_timer.c
+@@ -155,6 +155,7 @@ static void tcp_mtu_probing(struct inet_connection_sock *icsk, struct sock *sk)
+ 		mss = tcp_mtu_to_mss(sk, icsk->icsk_mtup.search_low) >> 1;
+ 		mss = min(net->ipv4.sysctl_tcp_base_mss, mss);
+ 		mss = max(mss, 68 - tcp_sk(sk)->tcp_header_len);
++		mss = max(mss, net->ipv4.sysctl_tcp_min_snd_mss);
+ 		icsk->icsk_mtup.search_low = tcp_mss_to_mtu(sk, mss);
+ 	}
+ 	tcp_sync_mss(sk, icsk->icsk_pmtu_cookie);
+-- 
+2.22.0.rc2.383.gf4fbbf30c2-goog
+

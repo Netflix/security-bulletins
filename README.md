@@ -9,3 +9,10 @@ Below are notifications for security and privacy events within Netflix Open Sour
 | August 31, 2016 | Important | [zuul.filter.admin.enabled Defaults to True](advisories/nflx-2016-003.md) |
 | June 6, 2016 | Important | [Heap Overflow in Dynomite YAML Configuration Parser](advisories/nflx-2016-002.md) |
 | February 22, 2015 | Important | [External Entity Injection 'XXE' in Recipes-rss Open-Source Application](advisories/nflx-2015-001.md) |
+
+
+Below are notifications for security vulnerabilities in third-party software.
+
+| Date              | Type      | Subject |
+|-------------------|-----------|-----------------------------------------------|
+| June 17, 2019 | Important | [Linux and FreeBSD Kernel: Multiple TCP-based remote denial of service vulnerabilities](advisories/third-party/2019-001.md) | 
