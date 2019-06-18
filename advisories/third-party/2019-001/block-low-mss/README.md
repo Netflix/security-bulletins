@@ -6,6 +6,9 @@ set a range of TCP MSS values to reject. An attacker using a small
 (in this example < 500) MSS will drop the TCP SYN packets.
 This will block connection establishment and block the attack.
 
+#### [ip6tables.txt](ip6tables.txt)
+The equivalent of the above, for ip6tables.
+
 #### [tc-bytecode](tc-bytecode)
 Outputs tc commands to install a bpf ingress filter,
 as for above TCP SYN packets are dropped.
