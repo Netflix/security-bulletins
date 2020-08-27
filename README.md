@@ -4,7 +4,7 @@ Below are notifications for security and privacy events within Netflix Open Sour
 
 | Date              | Type      | Subject |
 |-------------------|-----------|-----------------------------------------------|
-| August 27, 2020 | Important | [Authenticated Server-Side Request Forgery in Orca Spinnaker](advisories/nflx-2015-003.md)|
+| August 27, 2020 | Important | [Authenticated Server-Side Request Forgery in Orca Spinnaker](advisories/nflx-2020-003.md)|
 | March 05, 2020| Important | [Server-Side Template Injection in Netflix Titus](advisories/nflx-2020-002.md)
 | February 24, 2020| Important | [Server-Side Template Injection in Netflix Conductor](advisories/nflx-2020-001.md)
 | June 20, 2019| Informational | [Dial Reference code implementation has Denial of Service](advisories/nflx-2019-003.md)
