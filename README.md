@@ -4,6 +4,7 @@ Below are notifications for security and privacy events within Netflix Open Sour
 
 | Date              | Type      | Subject |
 |-------------------|-----------|-----------------------------------------------|
+| December 08, 2020| Important | [SpEL Template injection on Netflix Spinnaker](advisories/nflx-2020-006.md)
 | November 6, 2020 | Important | [Multiple Access Control Issues in Dispatch](advisories/nflx-2020-005.md)|
 | November 6, 2020 | Important | [Multiple XSS Vulnerabilities in Dispatch](advisories/nflx-2020-004.md)|
 | August 27, 2020 | Important | [Authenticated Server-Side Request Forgery in Orca Spinnaker](advisories/nflx-2020-003.md)|
