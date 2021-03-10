@@ -4,6 +4,7 @@ Below are notifications for security and privacy events within Netflix Open Sour
 
 | Date              | Type      | Subject |
 |-------------------|-----------|-----------------------------------------------|
+| March 10, 2021| Important | [Critical Vulnerability Exposing Private Keys in Lemur](advisories/nflx-2021-003.md)
 | December 08, 2020| Important | [SpEL Template injection on Netflix Spinnaker](advisories/nflx-2020-006.md)
 | November 6, 2020 | Important | [Multiple Access Control Issues in Dispatch](advisories/nflx-2020-005.md)|
 | November 6, 2020 | Important | [Multiple XSS Vulnerabilities in Dispatch](advisories/nflx-2020-004.md)|
