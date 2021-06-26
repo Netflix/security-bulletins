@@ -1,3 +1,3 @@
 
-iptables -A INPUT -p tcp -m tcpmss --mss 1:500 -j DROP
-ip6tables -A INPUT -p tcp -m tcpmss --mss 1:500 -j DROP
+iptables -t raw -I PREROUTING -p tcp -m tcpmss --mss 1:500 -j DROP
+ip6tables -t raw -I PREROUTING -p tcp -m tcpmss --mss 1:500 -j DROP
