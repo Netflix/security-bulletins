@@ -4,6 +4,7 @@ Below are notifications for security and privacy events within Netflix Open Sour
 
 | Date              | Type      | Subject |
 |-------------------|-----------|-----------------------------------------------|
+| March 30, 2022| Critical | [Format String Vulnerability in ConsoleMe](advisories/nflx-2022-001.md)|
 | March 23, 2021| Important | [Local Information Disclosure in Priam](advisories/nflx-2021-002.md)|
 | March 23, 2021| Important | [Local Information Disclosure in Hollow](advisories/nflx-2021-001.md)|
 | March 10, 2021| Important | [Critical Vulnerability Exposing Private Keys in Lemur](advisories/nflx-2021-003.md)|
