@@ -4,7 +4,6 @@ Below are notifications for security and privacy events within Netflix Open Sour
 
 | Date              | Type      | Subject |
 |-------------------|-----------|-----------------------------------------------|
-
 | May 09, 2024| Critical | [Path Traversal vulnerability via File Uploads in Genie](advisories/nflx-2024-001.md)|
 | November 09, 2023| Low | [CORS check misconfiguration in the DIAL protocol](advisories/nflx-2023-003.md)|
 | August 17, 2023| Critical | [Secret Key used for signing JWT tokens exposure in Dispatch](advisories/nflx-2023-002.md)|
