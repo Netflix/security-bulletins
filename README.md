@@ -4,6 +4,7 @@ Below are notifications for security and privacy events within Netflix Open Sour
 
 | Date              | Type      | Subject |
 |-------------------|-----------|-----------------------------------------------|
+| August 1, 2024| Critical | [Server-Side Template Injection in Dispatch Message Templates](advisories/nflx-2024-003.md)|
 | May 16, 2024| Critical | [Arbitrary File Read Vulnerability in ConsoleMe via Limited Git command RCE](advisories/nflx-2024-002.md)|
 | May 09, 2024| Critical | [Path Traversal vulnerability via File Uploads in Genie](advisories/nflx-2024-001.md)|
 | November 09, 2023| Low | [CORS check misconfiguration in the DIAL protocol](advisories/nflx-2023-003.md)|
